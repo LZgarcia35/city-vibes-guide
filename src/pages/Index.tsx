@@ -1,13 +1,34 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import Seo from "@/components/Seo";
+import BackgroundGlow from "@/components/BackgroundGlow";
+import Logo from "@/components/Logo";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <main className="min-h-screen flex items-center justify-center">
+      <Seo
+        title="MyNight — Vida noturna em tempo real"
+        description="Descubra bares e festas em tempo real. Veja fotos, vídeos e avaliações da comunidade."
+        canonical="/"
+      />
+      <BackgroundGlow />
+      <section className="w-full max-w-md mx-auto text-center p-6 animate-enter">
+        <Logo className="justify-center mb-6" />
+        <h1 className="sr-only">MyNight — rede social da vida noturna</h1>
+        <p className="text-base text-muted-foreground mb-8">
+          Veja como está a noite agora — lista e mapa com fotos e avaliações em tempo real.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button asChild variant="hero" size="lg" className="w-full sm:w-auto">
+            <Link to="/login" aria-label="Ir para Login">Login</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+            <Link to="/signup" aria-label="Ir para Inscrever-se">Inscrever-se</Link>
+          </Button>
+        </div>
+      </section>
+    </main>
   );
 };
 
