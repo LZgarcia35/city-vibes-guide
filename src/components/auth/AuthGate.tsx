@@ -1,8 +1,14 @@
 import { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "./AuthProvider";
 
-// Placeholder AuthGate until Supabase is connected.
-// Once Supabase integration is enabled, we'll enforce route protection here.
+// Route protection using Supabase session from AuthProvider
 const AuthGate = ({ children }: { children: ReactNode }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return null; // Optionally add a spinner later
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <>{children}</>;
 };
 

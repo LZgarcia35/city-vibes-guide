@@ -10,6 +10,8 @@ import SignUp from "./pages/SignUp";
 import Feed from "./pages/Feed";
 import Place from "./pages/Place";
 import Contribute from "./pages/Contribute";
+import { AuthProvider } from "./components/auth/AuthProvider";
+import AuthGate from "./components/auth/AuthGate";
 
 const queryClient = new QueryClient();
 
@@ -18,18 +20,20 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/feed" element={<Feed />} />
-          <Route path="/place/:id" element={<Place />} />
-          <Route path="/contribute" element={<Contribute />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/feed" element={<AuthGate><Feed /></AuthGate>} />
+            <Route path="/place/:id" element={<AuthGate><Place /></AuthGate>} />
+            <Route path="/contribute" element={<AuthGate><Contribute /></AuthGate>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

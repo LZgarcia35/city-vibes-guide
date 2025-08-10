@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import nightlife1 from "@/assets/nightlife-1.jpg";
 import nightlife2 from "@/assets/nightlife-2.jpg";
 import nightlife3 from "@/assets/nightlife-3.jpg";
-import { MapPin, List, Navigation } from "lucide-react";
+import { MapPin, List, Navigation, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
 const venues = [
   { id: "1", name: "Bar Neon", rating: 4.6, price: "$$$", image: nightlife1 },
   { id: "2", name: "Rooftop 22", rating: 4.3, price: "$$", image: nightlife2 },
@@ -17,6 +18,9 @@ const venues = [
 ];
 
 const Feed = () => {
+  const { signOut } = useAuth();
+  const { toast } = useToast();
+  const doSignOut = async () => { await signOut(); toast({ title: "Sessão encerrada", description: "Você saiu da conta." }); };
   return (
     <main className="min-h-screen">
       <Seo title="Feed | MyNight" description="Explore bares e festas em tempo real." canonical="/feed" />
@@ -24,9 +28,14 @@ const Feed = () => {
       <header className="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-background/70 bg-background/80 border-b">
         <div className="container flex items-center justify-between h-14">
           <Logo />
-          <Button asChild variant="outline" size="sm">
-            <Link to="/contribute" aria-label="Contribuir"><Navigation className="h-4 w-4" />Contribuir</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/contribute" aria-label="Contribuir"><Navigation className="h-4 w-4" />Contribuir</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={doSignOut} aria-label="Sair">
+              <LogOut className="h-4 w-4 mr-2"/>Sair
+            </Button>
+          </div>
         </div>
       </header>
 

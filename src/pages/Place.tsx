@@ -7,12 +7,17 @@ import nightlife3 from "@/assets/nightlife-3.jpg";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "react-router-dom";
-
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useToast } from "@/hooks/use-toast";
+import { LogOut } from "lucide-react";
 const gallery = [nightlife1, nightlife2, nightlife3, nightlife2, nightlife1, nightlife3];
 
 const Place = () => {
   const { id } = useParams();
   const name = id === "2" ? "Rooftop 22" : id === "3" ? "Subsolo Club" : "Bar Neon";
+  const { signOut } = useAuth();
+  const { toast } = useToast();
+  const doSignOut = async () => { await signOut(); toast({ title: "Sessão encerrada", description: "Você saiu da conta." }); };
 
   return (
     <main className="min-h-screen">
@@ -20,9 +25,14 @@ const Place = () => {
       <header className="sticky top-0 z-10 backdrop-blur supports-[backdrop-filter]:bg-background/70 bg-background/80 border-b">
         <div className="container flex items-center justify-between h-14">
           <Logo />
-          <Button asChild variant="outline" size="sm">
-            <Link to="/feed">Voltar</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/feed">Voltar</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={doSignOut} aria-label="Sair">
+              <LogOut className="h-4 w-4 mr-2"/>Sair
+            </Button>
+          </div>
         </div>
       </header>
 
