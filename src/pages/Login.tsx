@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import Seo from "@/components/Seo";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,11 @@ const Login = () => {
   const { toast } = useToast();
   const { session } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as any)?.from || "/feed";
 
   useEffect(() => {
-    if (session) navigate("/");
+    if (session) navigate("/feed");
   }, [session, navigate]);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -30,7 +32,7 @@ const Login = () => {
       return;
     }
     toast({ title: "Bem-vindo!", description: "Login realizado com sucesso." });
-    navigate("/");
+    navigate(from);
   };
   return (
     <main className="min-h-screen flex items-center justify-center">

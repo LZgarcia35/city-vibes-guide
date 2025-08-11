@@ -15,7 +15,7 @@ const SignUp = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (session) navigate("/");
+    if (session) navigate("/feed");
   }, [session, navigate]);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
