@@ -1,6 +1,6 @@
 import Seo from "@/components/Seo";
 import Logo from "@/components/Logo";
-import MapPlaceholder from "@/components/MapPlaceholder";
+import Map from "@/components/Map";
 import RatingStars from "@/components/RatingStars";
 import { Button } from "@/components/ui/button";
 import nightlife1 from "@/assets/nightlife-1.jpg";
@@ -69,7 +69,7 @@ const Feed = () => {
           </TabsContent>
 
           <TabsContent value="mapa" className="animate-enter">
-            <MapPlaceholder height="h-[70vh]" />
+            <Map height="h-[70vh]" />
           </TabsContent>
         </Tabs>
       </section>
