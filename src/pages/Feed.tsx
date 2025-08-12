@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import nightlife1 from "@/assets/nightlife-1.jpg";
 import nightlife2 from "@/assets/nightlife-2.jpg";
 import nightlife3 from "@/assets/nightlife-3.jpg";
-import { MapPin, List, Navigation, LogOut } from "lucide-react";
+import { MapPin, List, Navigation, LogOut, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -29,6 +29,9 @@ const Feed = () => {
         <div className="container flex items-center justify-between h-14">
           <Logo />
           <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to="/profile" aria-label="Meu perfil"><User className="h-4 w-4" />Perfil</Link>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/contribute" aria-label="Contribuir"><Navigation className="h-4 w-4" />Contribuir</Link>
             </Button>

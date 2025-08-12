@@ -10,6 +10,8 @@ import SignUp from "./pages/SignUp";
 import Feed from "./pages/Feed";
 import Place from "./pages/Place";
 import Contribute from "./pages/Contribute";
+import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import { AuthProvider } from "./components/auth/AuthProvider";
 import AuthGate from "./components/auth/AuthGate";
 
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/feed" element={<AuthGate><Feed /></AuthGate>} />
             <Route path="/place/:id" element={<AuthGate><Place /></AuthGate>} />
             <Route path="/contribute" element={<AuthGate><Contribute /></AuthGate>} />
+            <Route path="/profile" element={<AuthGate><Profile /></AuthGate>} />
+            <Route path="/user/:id" element={<UserProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
