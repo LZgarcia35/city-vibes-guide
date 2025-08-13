@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RatingStars from "@/components/RatingStars";
+import { FollowButton } from "@/components/FollowButton";
 
 // Types
 type Profile = Tables<"profiles">;
@@ -17,9 +18,16 @@ type Preferences = {
   favorite_drinks?: string[];
 };
 
+type ProfileWithBackground = Profile & {
+  background_url?: string;
+  background_color?: string;
+};
+
 const UserProfilePage = () => {
   const { id } = useParams<{ id: string }>();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileWithBackground | null>(null);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [venuesById, setVenuesById] = useState<Record<string, Venue>>({});
@@ -33,14 +41,24 @@ const UserProfilePage = () => {
   useEffect(() => {
     if (!id) return;
     const load = async () => {
-      const [{ data: p }, { data: theirVenues }, { data: theirReviews }] = await Promise.all([
+      const [
+        { data: p }, 
+        { data: theirVenues }, 
+        { data: theirReviews },
+        { data: followers },
+        { data: following }
+      ] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
         supabase.from("venues").select("*").eq("created_by", id).order("created_at", { ascending: false }),
         supabase.from("reviews").select("*").eq("user_id", id).order("created_at", { ascending: false }),
+        supabase.from("followers").select("id").eq("following_id", id),
+        supabase.from("followers").select("id").eq("follower_id", id),
       ]);
       setProfile(p ?? null);
       setVenues(theirVenues ?? []);
       setReviews(theirReviews ?? []);
+      setFollowersCount(followers?.length ?? 0);
+      setFollowingCount(following?.length ?? 0);
 
       const vIds = Array.from(new Set((theirReviews ?? []).map((r) => String(r.venue_id))));
       if (vIds.length) {
@@ -63,18 +81,37 @@ const UserProfilePage = () => {
       <Seo title={title} description={`Veja contribuições, avaliações e preferências de ${handleName}.`} canonical={`/user/${id || ""}`} />
       <h1 className="sr-only">Perfil público — contribuições e reviews</h1>
 
-      <section className="container py-6">
-        <div className="flex items-center gap-3 mb-4">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt={`Avatar de ${handleName}`} className="h-12 w-12 rounded-full border object-cover" />
-          ) : (
-            <div className="h-12 w-12 rounded-full border bg-muted" aria-label="Avatar padrão" />
-          )}
-          <div>
-            <div className="font-semibold leading-tight">{profile?.display_name || handleName}</div>
-            {profile?.bio && <div className="text-sm text-muted-foreground">{profile.bio}</div>}
+      <section 
+        className="relative min-h-48 bg-cover bg-center"
+        style={{
+          backgroundImage: profile?.background_url ? `url(${profile.background_url})` : 'none',
+          backgroundColor: profile?.background_color || 'hsl(var(--muted))'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="container relative py-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt={`Avatar de ${handleName}`} className="h-16 w-16 rounded-full border-2 border-white object-cover shadow-lg" />
+              ) : (
+                <div className="h-16 w-16 rounded-full border-2 border-white bg-muted shadow-lg" aria-label="Avatar padrão" />
+              )}
+              <div className="text-white">
+                <div className="font-semibold leading-tight text-lg drop-shadow-md">{profile?.display_name || handleName}</div>
+                {profile?.bio && <div className="text-sm opacity-90">{profile.bio}</div>}
+                <div className="flex gap-4 text-xs mt-1 opacity-80">
+                  <span>{followersCount} seguidores</span>
+                  <span>{followingCount} seguindo</span>
+                </div>
+              </div>
+            </div>
+            <FollowButton userId={id!} />
           </div>
         </div>
+      </section>
+      
+      <section className="container py-6">
 
         <Tabs defaultValue="contribuicoes" className="w-full">
           <TabsList className="mb-4">

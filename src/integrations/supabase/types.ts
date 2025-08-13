@@ -14,9 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      followers: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
+          background_color: string | null
+          background_url: string | null
           bio: string | null
           created_at: string
           display_name: string | null
@@ -26,6 +49,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          background_color?: string | null
+          background_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string | null
@@ -35,6 +60,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          background_color?: string | null
+          background_url?: string | null
           bio?: string | null
           created_at?: string
           display_name?: string | null
@@ -49,28 +76,34 @@ export type Database = {
           comment: string | null
           created_at: string
           id: string
+          photos: string[] | null
           rating: number
           updated_at: string
           user_id: string
           venue_id: string
+          videos: string[] | null
         }
         Insert: {
           comment?: string | null
           created_at?: string
           id?: string
+          photos?: string[] | null
           rating: number
           updated_at?: string
           user_id: string
           venue_id: string
+          videos?: string[] | null
         }
         Update: {
           comment?: string | null
           created_at?: string
           id?: string
+          photos?: string[] | null
           rating?: number
           updated_at?: string
           user_id?: string
           venue_id?: string
+          videos?: string[] | null
         }
         Relationships: [
           {
@@ -93,8 +126,10 @@ export type Database = {
           lat: number
           lng: number
           name: string
+          photos: string[] | null
           price_range: string | null
           updated_at: string
+          videos: string[] | null
         }
         Insert: {
           address?: string | null
@@ -106,8 +141,10 @@ export type Database = {
           lat: number
           lng: number
           name: string
+          photos?: string[] | null
           price_range?: string | null
           updated_at?: string
+          videos?: string[] | null
         }
         Update: {
           address?: string | null
@@ -119,8 +156,10 @@ export type Database = {
           lat?: number
           lng?: number
           name?: string
+          photos?: string[] | null
           price_range?: string | null
           updated_at?: string
+          videos?: string[] | null
         }
         Relationships: []
       }

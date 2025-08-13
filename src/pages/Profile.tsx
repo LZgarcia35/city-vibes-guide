@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import RatingStars from "@/components/RatingStars";
 import { Link } from "react-router-dom";
+import { FileUpload } from "@/components/FileUpload";
+import { Palette } from "lucide-react";
 
 // Types
 type Profile = Tables<"profiles">;
@@ -19,6 +21,16 @@ type Review = Tables<"reviews">;
 
 const CATEGORIES = ["Bar", "Restaurante", "Boate"] as const;
 const PRICE_RANGES = ["$", "$$", "$$$"] as const;
+const BACKGROUND_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--secondary))", 
+  "hsl(var(--accent))",
+  "#1a1a1a",
+  "#4f46e5",
+  "#059669",
+  "#dc2626",
+  "#ea580c"
+] as const;
 
 type Preferences = {
   favorite_categories?: string[];
@@ -26,10 +38,15 @@ type Preferences = {
   favorite_drinks?: string[];
 };
 
+type ProfileWithBackground = Profile & {
+  background_url?: string;
+  background_color?: string;
+};
+
 const ProfilePage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileWithBackground | null>(null);
   const [loading, setLoading] = useState(true);
   const [venues, setVenues] = useState<Venue[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -75,6 +92,8 @@ const ProfilePage = () => {
   const [favoriteCategories, setFavoriteCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<string | "" | null>("");
   const [favoriteDrinks, setFavoriteDrinks] = useState<string>("");
+  const [backgroundUrl, setBackgroundUrl] = useState("");
+  const [backgroundColor, setBackgroundColor] = useState("");
 
   useEffect(() => {
     if (!profile) return;
@@ -84,6 +103,8 @@ const ProfilePage = () => {
     setFavoriteCategories(prefs.favorite_categories ?? []);
     setPriceRange(prefs.price_range ?? "");
     setFavoriteDrinks((prefs.favorite_drinks ?? []).join(", "));
+    setBackgroundUrl(profile.background_url ?? "");
+    setBackgroundColor(profile.background_color ?? "");
   }, [profile, prefs]);
 
   const saveProfile = async () => {
@@ -93,6 +114,8 @@ const ProfilePage = () => {
       display_name: displayName || null,
       avatar_url: avatarUrl || null,
       bio: bio || null,
+      background_url: backgroundUrl || null,
+      background_color: backgroundColor || null,
     } as any);
     if (error) return toast({ title: "Erro ao salvar perfil", description: error.message, variant: "destructive" });
     toast({ title: "Perfil atualizado" });
@@ -122,19 +145,31 @@ const ProfilePage = () => {
       <Seo title="Meu Perfil | MyNight" description="Configure seu perfil, preferências e veja suas contribuições." canonical="/profile" />
       <h1 className="sr-only">Meu Perfil — configurações, preferências e histórico</h1>
 
-      <section className="container py-6">
-        <div className="flex items-center gap-3 mb-4">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="Avatar do usuário" className="h-12 w-12 rounded-full border object-cover" />
-          ) : (
-            <div className="h-12 w-12 rounded-full border bg-muted" aria-label="Avatar padrão" />
-          )}
-          <div>
-            <div className="font-semibold leading-tight">{displayName || "Seu nome"}</div>
-            <div className="text-sm text-muted-foreground">@{user.email?.split("@")[0]}</div>
-            <Link to={`/user/${user.id}`} className="text-xs text-primary underline underline-offset-2">Ver perfil público</Link>
+      <section 
+        className="relative min-h-48 bg-cover bg-center"
+        style={{
+          backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : 'none',
+          backgroundColor: backgroundColor || 'hsl(var(--muted))'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="container relative py-6">
+          <div className="flex items-center gap-3 mb-4">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar do usuário" className="h-16 w-16 rounded-full border-2 border-white object-cover shadow-lg" />
+            ) : (
+              <div className="h-16 w-16 rounded-full border-2 border-white bg-muted shadow-lg" aria-label="Avatar padrão" />
+            )}
+            <div className="text-white">
+              <div className="font-semibold leading-tight text-lg drop-shadow-md">{displayName || "Seu nome"}</div>
+              <div className="text-sm opacity-90">@{user.email?.split("@")[0]}</div>
+              <Link to={`/user/${user.id}`} className="text-xs text-white underline underline-offset-2 opacity-80 hover:opacity-100">Ver perfil público</Link>
+            </div>
           </div>
         </div>
+      </section>
+      
+      <section className="container py-6">
 
         <Tabs defaultValue="perfil" className="w-full">
           <TabsList className="mb-4">
@@ -152,13 +187,68 @@ const ProfilePage = () => {
                   <Input id="display_name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Seu nome público" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="avatar_url">Avatar URL</Label>
-                  <Input id="avatar_url" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="Link da sua foto" />
+                  <Label>Foto do perfil</Label>
+                  <FileUpload
+                    bucket="avatars"
+                    accept="image/*"
+                    onUpload={setAvatarUrl}
+                    className="w-full"
+                  />
+                  {avatarUrl && (
+                    <div className="mt-2">
+                      <img src={avatarUrl} alt="Preview" className="h-20 w-20 rounded-full object-cover border" />
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Fale um pouco sobre você" />
                 </div>
+                <div className="space-y-1">
+                  <Label>Fundo do perfil</Label>
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {BACKGROUND_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => {
+                            setBackgroundColor(color);
+                            setBackgroundUrl("");
+                          }}
+                          className="w-8 h-8 rounded-full border-2 border-white shadow-md"
+                          style={{ backgroundColor: color }}
+                          aria-label={`Cor ${color}`}
+                        />
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setBackgroundColor("");
+                          setBackgroundUrl("");
+                        }}
+                      >
+                        Limpar
+                      </Button>
+                    </div>
+                    <FileUpload
+                      bucket="profile-backgrounds"
+                      accept="image/*"
+                      onUpload={(url) => {
+                        setBackgroundUrl(url);
+                        setBackgroundColor("");
+                      }}
+                    >
+                      <Button type="button" variant="outline" size="sm" className="w-full">
+                        <Palette className="h-4 w-4 mr-2" />
+                        Upload de imagem
+                      </Button>
+                    </FileUpload>
+                  </div>
+                </div>
+                
                 <Button onClick={saveProfile} disabled={loading}>Salvar perfil</Button>
               </div>
 
