@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import RatingStars from "@/components/RatingStars";
 import { Link } from "react-router-dom";
-import { FileUpload } from "@/components/FileUpload";
+import { FileUpload, MediaPreview } from "@/components/FileUpload";
 import { Palette } from "lucide-react";
 
 // Types
@@ -94,6 +94,11 @@ const ProfilePage = () => {
   const [favoriteDrinks, setFavoriteDrinks] = useState<string>("");
   const [backgroundUrl, setBackgroundUrl] = useState("");
   const [backgroundColor, setBackgroundColor] = useState("");
+
+  // Media states for preferences, venues, and reviews
+  const [preferencesMedia, setPreferencesMedia] = useState<string[]>([]);
+  const [venueMedia, setVenueMedia] = useState<Record<string, string[]>>({});
+  const [reviewMedia, setReviewMedia] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (!profile) return;
@@ -311,6 +316,28 @@ const ProfilePage = () => {
                   <p className="text-xs text-muted-foreground">Separe por vírgulas</p>
                 </div>
 
+                <div className="space-y-1">
+                  <Label>Fotos e Vídeos das Preferências</Label>
+                  <FileUpload
+                    onUpload={(url) => setPreferencesMedia([...preferencesMedia, url])}
+                    bucket="review-media"
+                    accept="image/*,video/*"
+                  />
+                  {preferencesMedia.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                      {preferencesMedia.map((url, index) => (
+                        <MediaPreview
+                          key={index}
+                          url={url}
+                          onRemove={() => {
+                            setPreferencesMedia(preferencesMedia.filter((_, i) => i !== index));
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <Button onClick={savePreferences} disabled={loading}>Salvar preferências</Button>
               </div>
 
@@ -323,12 +350,60 @@ const ProfilePage = () => {
           <TabsContent value="contribuicoes" className="animate-enter">
             <div className="space-y-3">
               <div className="text-sm text-muted-foreground">Locais adicionados por você ({venues.length})</div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-1 lg:grid-cols-2">
                 {venues.map((v) => (
-                  <Link key={String(v.id)} to={`/place/${v.id}`} className="rounded-lg border p-3 hover:bg-muted/30">
-                    <div className="font-medium">{v.name}</div>
-                    <div className="text-xs text-muted-foreground">{v.category || "Local"}</div>
-                  </Link>
+                  <div key={String(v.id)} className="rounded-lg border p-4 bg-card/50">
+                    <Link to={`/place/${v.id}`} className="block hover:bg-muted/30 -m-4 p-4 rounded-lg">
+                      <div className="font-medium">{v.name}</div>
+                      <div className="text-xs text-muted-foreground">{v.category || "Local"}</div>
+                    </Link>
+                    
+                    {/* Display existing venue photos */}
+                    {v.photos && v.photos.length > 0 && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
+                        {v.photos.map((photo, index) => (
+                          <img
+                            key={index}
+                            src={photo}
+                            alt={`${v.name} - ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border"
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add new photos */}
+                    <div className="mt-3">
+                      <FileUpload
+                        onUpload={(url) => {
+                          const currentMedia = venueMedia[String(v.id)] || [];
+                          setVenueMedia({
+                            ...venueMedia,
+                            [String(v.id)]: [...currentMedia, url]
+                          });
+                        }}
+                        bucket="venue-photos"
+                        accept="image/*,video/*"
+                      />
+                      {venueMedia[String(v.id)] && venueMedia[String(v.id)].length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                          {venueMedia[String(v.id)].map((url, index) => (
+                            <MediaPreview
+                              key={index}
+                              url={url}
+                              onRemove={() => {
+                                const updatedMedia = venueMedia[String(v.id)].filter((_, i) => i !== index);
+                                setVenueMedia({
+                                  ...venueMedia,
+                                  [String(v.id)]: updatedMedia
+                                });
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ))}
                 {venues.length === 0 && <div className="text-sm text-muted-foreground">Você ainda não adicionou locais.</div>}
               </div>
@@ -340,12 +415,66 @@ const ProfilePage = () => {
               <div className="text-sm text-muted-foreground">Suas avaliações ({reviews.length})</div>
               <div className="space-y-3">
                 {reviews.map((r) => (
-                  <div key={String(r.id)} className="rounded-lg border p-3">
+                  <div key={String(r.id)} className="rounded-lg border p-4 bg-card/50">
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{venuesById[String(r.venue_id)]?.name || "Local"}</div>
                       {typeof (r as any).rating === "number" && <RatingStars rating={(r as any).rating as number} />}
                     </div>
                     {r.comment && <p className="mt-1 text-sm">{r.comment}</p>}
+
+                    {/* Display existing review media */}
+                    {((r.photos && r.photos.length > 0) || (r.videos && r.videos.length > 0)) && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
+                        {r.photos?.map((photo, index) => (
+                          <img
+                            key={`photo-${index}`}
+                            src={photo}
+                            alt={`Review - ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border"
+                          />
+                        ))}
+                        {r.videos?.map((video, index) => (
+                          <video
+                            key={`video-${index}`}
+                            src={video}
+                            className="w-full h-20 object-cover rounded-lg border"
+                            controls
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add new media to existing reviews */}
+                    <div className="mt-3">
+                      <FileUpload
+                        onUpload={(url) => {
+                          const currentMedia = reviewMedia[String(r.id)] || [];
+                          setReviewMedia({
+                            ...reviewMedia,
+                            [String(r.id)]: [...currentMedia, url]
+                          });
+                        }}
+                        bucket="review-media"
+                        accept="image/*,video/*"
+                      />
+                      {reviewMedia[String(r.id)] && reviewMedia[String(r.id)].length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                          {reviewMedia[String(r.id)].map((url, index) => (
+                            <MediaPreview
+                              key={index}
+                              url={url}
+                              onRemove={() => {
+                                const updatedMedia = reviewMedia[String(r.id)].filter((_, i) => i !== index);
+                                setReviewMedia({
+                                  ...reviewMedia,
+                                  [String(r.id)]: updatedMedia
+                                });
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
                 {reviews.length === 0 && <div className="text-sm text-muted-foreground">Você ainda não avaliou locais.</div>}
