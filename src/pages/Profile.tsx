@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import RatingStars from "@/components/RatingStars";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FileUpload, MediaPreview } from "@/components/FileUpload";
-import { Palette } from "lucide-react";
+import { Palette, ArrowLeft } from "lucide-react";
 
 // Types
 type Profile = Tables<"profiles">;
@@ -46,6 +46,7 @@ type ProfileWithBackground = Profile & {
 const ProfilePage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileWithBackground | null>(null);
   const [loading, setLoading] = useState(true);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -159,6 +160,15 @@ const ProfilePage = () => {
       >
         <div className="absolute inset-0 bg-black/20" />
         <div className="container relative py-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="absolute top-4 left-4 text-white hover:bg-white/20 border border-white/20"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div className="flex items-center gap-3 mb-4">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Avatar do usuário" className="h-16 w-16 rounded-full border-2 border-white object-cover shadow-lg" />
