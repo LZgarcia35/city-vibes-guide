@@ -1,179 +1,202 @@
 import React, { useEffect, useRef } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { Loader } from "@googlemaps/js-api-loader";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 
-const MAPBOX_TOKEN = "pk.eyJ1IjoiZGVkZWNydXplcyIsImEiOiJjbWU2bHR1NmowcmNhMmxuZHQ5ZW1jZHBhIn0.fjXFTjYOlsTz_P1G6UsJEQ";
+// Fortaleza coordinates
+const FORTALEZA_CENTER = { lat: -3.7319, lng: -38.5267 };
 
-type Venue = Tables<"venues">;
-type VenueStats = Tables<"venue_stats">;
+interface Place {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  address: string;
+  rating: number;
+  price_level?: number;
+  types: string[];
+  photo_reference?: string;
+}
 
 const Map = ({ height = "h-[60vh]" }: { height?: string }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    const initializeMap = async () => {
+      try {
+        const loader = new Loader({
+          apiKey: "AIzaSyBHLett8djBo62dDXj0EjCpF6B2BPng7R4", // Public key for testing
+          version: "weekly",
+          libraries: ["places"]
+        });
 
-    mapRef.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [-43.1964, -22.9083], // Default: Rio de Janeiro
-      zoom: 10,
-      pitch: 45,
-      bearing: -10,
-      cooperativeGestures: true,
-    });
+        await loader.load();
 
-    mapRef.current.addControl(
-      new mapboxgl.NavigationControl({ visualizePitch: true }),
-      "top-right"
-    );
+        // Initialize Google Map centered on Fortaleza
+        mapRef.current = new google.maps.Map(mapContainer.current!, {
+          center: FORTALEZA_CENTER,
+          zoom: 13,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }]
+            }
+          ]
+        });
 
-    // Geolocate control
-    mapRef.current.addControl(
-      new mapboxgl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,
-        showUserHeading: true,
-      }),
-      "top-right"
-    );
+        // Load places from Google Places API
+        await loadPlaces();
 
-    // Disable scroll zoom for smoother page scroll
-    mapRef.current.scrollZoom.disable();
-
-    // Subtle fog/atmosphere
-    mapRef.current.on("style.load", () => {
-      mapRef.current?.setFog({
-        color: "rgb(255,255,255)",
-        "high-color": "rgb(200,200,225)",
-        "horizon-blend": 0.2,
-      });
-    });
-
-    // Load venues and add markers when map is ready
-    const loadVenues = async () => {
-      const [{ data: venues }, { data: stats }] = await Promise.all([
-        supabase
-          .from("venues")
-          .select("id,name,lat,lng,address,price_range") as unknown as Promise<{ data: Venue[] | null }>,
-        supabase
-          .from("venue_stats")
-          .select("venue_id,avg_rating,reviews_count") as unknown as Promise<{ data: VenueStats[] | null }>,
-      ]);
-
-      const statsMap = new globalThis.Map<string, VenueStats>();
-      (stats || []).forEach((s) => {
-        if (s && s.venue_id) statsMap.set(String(s.venue_id), s);
-      });
-
-      // Clear old markers
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-
-      (venues || []).forEach((v) => {
-        if (!v || typeof v.lng !== "number" || typeof v.lat !== "number") return;
-        const stat = statsMap.get(String(v.id));
-        addMarker(v, stat || null);
-      });
+      } catch (error) {
+        console.error("Error initializing map:", error);
+        // Fallback to showing venues from database
+        await loadVenuesFromDB();
+      }
     };
 
-    const addMarker = (v: Venue, stat: VenueStats | null) => {
-      const el = document.createElement("button");
-      el.className = "w-3 h-3 rounded-full bg-primary border";
-      el.setAttribute("aria-label", v.name ?? "Local");
-
-      const popup = new mapboxgl.Popup({ offset: 12 });
-      const popupEl = document.createElement("div");
-      popupEl.className = "min-w-[220px] max-w-[260px] text-sm";
-
-      const title = document.createElement("h3");
-      title.className = "font-semibold";
-      title.textContent = v.name ?? "Local";
-      popupEl.appendChild(title);
-
-      const meta = document.createElement("div");
-      meta.className = "mt-1 text-xs text-muted-foreground";
-      const ratingText = stat?.avg_rating != null ? stat.avg_rating.toFixed(1) : "-";
-      const countText = stat?.reviews_count != null ? stat.reviews_count : 0;
-      meta.textContent = `${ratingText} • ${countText} avaliações`;
-      popupEl.appendChild(meta);
-
-      if (v.address) {
-        const adr = document.createElement("div");
-        adr.className = "mt-1 text-xs";
-        adr.textContent = v.address as string;
-        popupEl.appendChild(adr);
-      }
-
-      const actions = document.createElement("div");
-      actions.className = "mt-3 flex gap-2";
-      const details = document.createElement("a");
-      details.href = `/place/${v.id}`;
-      details.className = "text-primary underline underline-offset-2";
-      details.textContent = "Ver detalhes";
-      actions.appendChild(details);
-      popupEl.appendChild(actions);
-
-      const commentsWrap = document.createElement("div");
-      commentsWrap.className = "mt-2 border-t pt-2";
-      const commentsTitle = document.createElement("div");
-      commentsTitle.className = "text-xs font-medium";
-      commentsTitle.textContent = "Últimos comentários";
-      const commentsList = document.createElement("div");
-      commentsList.className = "mt-1 space-y-1 text-xs";
-      commentsWrap.appendChild(commentsTitle);
-      commentsWrap.appendChild(commentsList);
-      popupEl.appendChild(commentsWrap);
-
-      popup.setDOMContent(popupEl);
-
-      popup.on("open", async () => {
-        const { data: reviews } = await supabase
-          .from("reviews")
-          .select("comment,rating,created_at")
-          .eq("venue_id", v.id)
-          .order("created_at", { ascending: false })
-          .limit(2);
-
-        commentsList.textContent = "";
-        if (!reviews || reviews.length === 0) {
-          const none = document.createElement("div");
-          none.className = "text-muted-foreground";
-          none.textContent = "Sem comentários ainda.";
-          commentsList.appendChild(none);
-          return;
-        }
-
-        reviews.forEach((r) => {
-          const item = document.createElement("div");
-          const rating = typeof (r as any).rating === "number" ? `${(r as any).rating}/5` : "";
-          const text = (r as any).comment ?? "";
-          item.textContent = `${rating}${rating ? " — " : ""}${text}`;
-          commentsList.appendChild(item);
+    const loadPlaces = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-places', {
+          body: { 
+            lat: FORTALEZA_CENTER.lat, 
+            lng: FORTALEZA_CENTER.lng,
+            radius: 10000,
+            type: 'restaurant|bar|night_club'
+          }
         });
+
+        if (error) throw error;
+
+        // Clear old markers
+        markersRef.current.forEach((m) => m.setMap(null));
+        markersRef.current = [];
+
+        // Add markers for each place
+        data.places.forEach((place: Place) => {
+          addGooglePlaceMarker(place);
+        });
+
+      } catch (error) {
+        console.error("Error loading places:", error);
+        // Fallback to database venues
+        await loadVenuesFromDB();
+      }
+    };
+
+    const loadVenuesFromDB = async () => {
+      try {
+        const { data: venues } = await supabase
+          .from("venues")
+          .select("id,name,lat,lng,address,price_range");
+
+        const { data: stats } = await supabase
+          .from("venue_stats")
+          .select("venue_id,avg_rating,reviews_count");
+
+        const statsMap = new globalThis.Map();
+        (stats || []).forEach((s: any) => {
+          if (s && s.venue_id) statsMap.set(String(s.venue_id), s);
+        });
+
+        // Clear old markers
+        markersRef.current.forEach((m) => m.setMap(null));
+        markersRef.current = [];
+
+        (venues || []).forEach((v: any) => {
+          if (!v || typeof v.lng !== "number" || typeof v.lat !== "number") return;
+          const stat = statsMap.get(String(v.id));
+          addVenueMarker(v, stat || null);
+        });
+      } catch (error) {
+        console.error("Error loading venues from database:", error);
+      }
+    };
+
+    const addGooglePlaceMarker = (place: Place) => {
+      const marker = new google.maps.Marker({
+        position: { lat: place.lat, lng: place.lng },
+        map: mapRef.current!,
+        title: place.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#FF6B6B",
+          fillOpacity: 0.8,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+        }
       });
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([v.lng as number, v.lat as number])
-        .setPopup(popup)
-        .addTo(mapRef.current!);
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="min-width: 220px; max-width: 260px; font-size: 14px;">
+            <h3 style="font-weight: 600; margin: 0;">${place.name}</h3>
+            <div style="margin-top: 4px; font-size: 12px; color: #666;">
+              ${place.rating ? `${place.rating.toFixed(1)} ⭐` : 'Sem avaliação'}
+              ${place.price_level ? ` • ${'$'.repeat(place.price_level)}` : ''}
+            </div>
+            ${place.address ? `<div style="margin-top: 4px; font-size: 12px;">${place.address}</div>` : ''}
+            <div style="margin-top: 8px; font-size: 11px; color: #888;">
+              ${place.types.filter(type => !['establishment', 'point_of_interest'].includes(type)).slice(0, 3).join(', ')}
+            </div>
+          </div>
+        `
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(mapRef.current!, marker);
+      });
 
       markersRef.current.push(marker);
     };
 
-    mapRef.current.on("load", () => {
-      loadVenues();
-    });
+    const addVenueMarker = (venue: any, stat: any) => {
+      const marker = new google.maps.Marker({
+        position: { lat: venue.lat, lng: venue.lng },
+        map: mapRef.current!,
+        title: venue.name,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: "#8B5CF6",
+          fillOpacity: 0.8,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+        }
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="min-width: 220px; max-width: 260px; font-size: 14px;">
+            <h3 style="font-weight: 600; margin: 0;">${venue.name}</h3>
+            <div style="margin-top: 4px; font-size: 12px; color: #666;">
+              ${stat?.avg_rating ? `${stat.avg_rating.toFixed(1)} ⭐` : 'Sem avaliação'}
+              • ${stat?.reviews_count || 0} avaliações
+            </div>
+            ${venue.address ? `<div style="margin-top: 4px; font-size: 12px;">${venue.address}</div>` : ''}
+            <div style="margin-top: 12px;">
+              <a href="/place/${venue.id}" style="color: #8B5CF6; text-decoration: underline;">Ver detalhes</a>
+            </div>
+          </div>
+        `
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(mapRef.current!, marker);
+      });
+
+      markersRef.current.push(marker);
+    };
+
+    initializeMap();
 
     return () => {
-      markersRef.current.forEach((m) => m.remove());
-      mapRef.current?.remove();
+      markersRef.current.forEach((m) => m.setMap(null));
     };
   }, []);
 
